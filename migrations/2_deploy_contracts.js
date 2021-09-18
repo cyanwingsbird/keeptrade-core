@@ -12,5 +12,5 @@ module.exports = async function (deployer, network, accounts) {
     await singletons.ERC1820Registry(accounts[0]);
   }
   await deployer.deploy(KeepTrade, "100000000000000000000000000");
-  await deployer.deploy(KeepTradeV1Core, KeepTrade.address, 100 , 30 , 0 , 20 , 0, 10000, 0, "100000000000000000000000", "500000000000000000000000", "10000000000000000000000");
+  await deployer.deploy(KeepTradeV1Core, KeepTrade.address, 100 , 20 , 0 , 20 , 0, 10000, 0, "100000000000000000000000", "500000000000000000000000", "10000000000000000000000");
 };

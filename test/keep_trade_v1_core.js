@@ -222,7 +222,7 @@ contract("KeepTradeV1Core", async (accounts) => {
 			beforeAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
 		});
 
-		it("should trade correctly when fulfill at once", async function () {
+		it("should trade correctly when fill at once", async function () {
 			const amount = new BN("1000000000000000000"); //1
 			const rate = new BN("50000000000000000"); //0.05
 
@@ -264,16 +264,16 @@ contract("KeepTradeV1Core", async (accounts) => {
 			assert.equal(trade.addressTradeIndex.toNumber(), afterAddressTradeCount - 1 , "Trade addressTradeIndex should be the last index");
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
-			const fulfillAmount = await keeperGetAmountIn(keepTrade, amount, keeperKPTRBalance, traderKPTRBalance, rate);
+			const fillAmount = await keeperGetAmountIn(keepTrade, amount, keeperKPTRBalance, traderKPTRBalance, rate);
 
-			await tokenB.approve(keepTrade.address, fulfillAmount, { from: keeper });
+			await tokenB.approve(keepTrade.address, fillAmount, { from: keeper });
 			const allowanceTokenB = await tokenB.allowance(keeper, keepTrade.address, { from: keeper });
-			assert.equal(fromWei(allowanceTokenB), fromWei(fulfillAmount), "Token B approve failed");
+			assert.equal(fromWei(allowanceTokenB), fromWei(fillAmount), "Token B approve failed");
 
-			const fulfillTradeInfo = await keepTrade.fulfillTradeTokensForTokens(tradeId, fulfillAmount, { from: keeper });
-			//console.log("Gas used for fulfillTradeTokensForTokens: ", fulfillTradeInfo.receipt.gasUsed);
+			const fillTradeInfo = await keepTrade.fillTradeTokensForTokens(tradeId, fillAmount, { from: keeper });
+			//console.log("Gas used for fillTradeTokensForTokens: ", fillTradeInfo.receipt.gasUsed);
 
 			const traderTokenBAfterBalance = await tokenB.balanceOf(trader);
 			const keeperTokenAAfterBalance = await tokenA.balanceOf(keeper);
@@ -281,17 +281,17 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const governanceTokenAfterBalance = await tokenB.balanceOf(await keepTrade.governance());
 			assert.equal(fromWei(traderTokenBAfterBalance), fromWei(traderTokenBBeforeBalance.add(traderGetAmountOut(amount, rate))), "Amount wasn't correctly added to the trader");
 			assert.equal(fromWei(keeperTokenAAfterBalance), fromWei(keeperTokenABeforeBalance.add(amount)), "Amount wasn't correctly added to the keeper");
-			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fulfillAmount)), "Amount wasn't correctly taken from the keeper");
-			assert.equal(fromWei(governanceTokenAfterBalance), fromWei(governanceTokenBeforeBalance.add(fulfillAmount.sub(traderGetAmountOut(amount, rate)))), "Amount wasn't correctly added to the governance");
+			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fillAmount)), "Amount wasn't correctly taken from the keeper");
+			assert.equal(fromWei(governanceTokenAfterBalance), fromWei(governanceTokenBeforeBalance.add(fillAmount.sub(traderGetAmountOut(amount, rate)))), "Amount wasn't correctly added to the governance");
 
-			const afterfulfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
-			assert.equal(afterfulfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
+			const afterfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
+			assert.equal(afterfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
 
-			const afterfulfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
-			assert.equal(afterfulfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
+			const afterfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
+			assert.equal(afterfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
 		it("should trade correctly when refund required", async function () {
@@ -327,15 +327,15 @@ contract("KeepTradeV1Core", async (accounts) => {
 			assert.equal(trade.addressTradeIndex.toNumber(), afterAddressTradeCount - 1 , "Trade addressTradeIndex should be the last index");
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
-			const fulfillAmount = await keeperGetAmountIn(keepTrade, amount, keeperKPTRBalance, traderKPTRBalance, rate);
+			const fillAmount = await keeperGetAmountIn(keepTrade, amount, keeperKPTRBalance, traderKPTRBalance, rate);
 
-			await tokenB.approve(keepTrade.address, fulfillAmount, { from: keeper });
+			await tokenB.approve(keepTrade.address, fillAmount, { from: keeper });
 			const allowanceTokenB = await tokenB.allowance(keeper, keepTrade.address, { from: keeper });
-			assert.equal(fromWei(allowanceTokenB), fromWei(fulfillAmount), "Token B approve failed");
+			assert.equal(fromWei(allowanceTokenB), fromWei(fillAmount), "Token B approve failed");
 
-			await keepTrade.fulfillTradeTokensForTokens(tradeId, fulfillAmount, { from: keeper });
+			await keepTrade.fillTradeTokensForTokens(tradeId, fillAmount, { from: keeper });
 
 			const traderTokenBAfterBalance = await tokenB.balanceOf(trader);
 			const keeperTokenAAfterBalance = await tokenA.balanceOf(keeper);
@@ -344,18 +344,18 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const traderTokenAAfterRefundBalance = await tokenA.balanceOf(trader);
 			assert.equal(fromWei(traderTokenBAfterBalance), fromWei(traderTokenBBeforeBalance.add(traderGetAmountOut(amount, rate))), "Amount wasn't correctly added to the trader");
 			assert.equal(fromWei(keeperTokenAAfterBalance), fromWei(keeperTokenABeforeBalance.add(new BN("1000"))), "Amount wasn't correctly added to the keeper");
-			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fulfillAmount)), "Amount wasn't correctly taken from the keeper");
-			assert.equal(fromWei(governanceTokenAfterBalance), fromWei(governanceTokenBeforeBalance.add(fulfillAmount.sub(traderGetAmountOut(amount, rate)))), "Amount wasn't correctly added to the governance");
+			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fillAmount)), "Amount wasn't correctly taken from the keeper");
+			assert.equal(fromWei(governanceTokenAfterBalance), fromWei(governanceTokenBeforeBalance.add(fillAmount.sub(traderGetAmountOut(amount, rate)))), "Amount wasn't correctly added to the governance");
 			assert.equal(fromWei(traderTokenAAfterRefundBalance), fromWei(traderTokenAAfterBalance.add(new BN("100"))), "Amount wasn't correctly refunded to the trader");
 
-			const afterfulfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
-			assert.equal(afterfulfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
+			const afterfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
+			assert.equal(afterfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
 
-			const afterfulfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
-			assert.equal(afterfulfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
+			const afterfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
+			assert.equal(afterfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
 		it("should cancel correctly and refund", async function () {
@@ -387,17 +387,17 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const traderTokenAAfterRefundBalance = await tokenA.balanceOf(trader);
 			assert.equal(fromWei(traderTokenAAfterRefundBalance), fromWei(traderTokenABeforeBalance), "Amount wasn't correctly refunded to the trader");
 
-			const afterfulfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
-			assert.equal(afterfulfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
+			const afterfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
+			assert.equal(afterfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
 
-			const afterfulfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
-			assert.equal(afterfulfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
+			const afterfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
+			assert.equal(afterfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
-		it("should correctly trade -> fulfill -> cancel", async function () {
+		it("should correctly trade -> fill -> cancel", async function () {
 			const amount = new BN("2000000000000000000"); //2
 			const rate = new BN("30000000000000000"); //0.03
 
@@ -412,14 +412,14 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const afterAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
 			const singleTradeAmount = amount.div(new BN("2"));
-			const fulfillAmount = await keeperGetAmountIn(keepTrade, singleTradeAmount, keeperKPTRBalance, traderKPTRBalance, rate);
+			const fillAmount = await keeperGetAmountIn(keepTrade, singleTradeAmount, keeperKPTRBalance, traderKPTRBalance, rate);
 
-			await tokenB.approve(keepTrade.address, fulfillAmount, { from: keeper });
+			await tokenB.approve(keepTrade.address, fillAmount, { from: keeper });
 
-			await keepTrade.fulfillTradeTokensForTokens(tradeId, fulfillAmount, { from: keeper });
+			await keepTrade.fillTradeTokensForTokens(tradeId, fillAmount, { from: keeper });
 
 			const traderTokenBAfterBalance = await tokenB.balanceOf(trader);
 			const keeperTokenAAfterBalance = await tokenA.balanceOf(keeper);
@@ -427,8 +427,8 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const governanceTokenAfterBalance = await tokenB.balanceOf(await keepTrade.governance());
 			assert.equal(fromWei(traderTokenBAfterBalance), fromWei(traderTokenBBeforeBalance.add(traderGetAmountOut(singleTradeAmount, rate))), "Amount wasn't correctly added to the trader");
 			assert.equal(fromWei(keeperTokenAAfterBalance), fromWei(keeperTokenABeforeBalance.add(singleTradeAmount)), "Amount wasn't correctly added to the keeper");
-			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fulfillAmount)), "Amount wasn't correctly taken from the keeper");
-			assert.equal(fromWei(governanceTokenAfterBalance), fromWei(governanceTokenBeforeBalance.add(fulfillAmount.sub(traderGetAmountOut(singleTradeAmount, rate)))), "Amount wasn't correctly added to the governance");
+			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fillAmount)), "Amount wasn't correctly taken from the keeper");
+			assert.equal(fromWei(governanceTokenAfterBalance), fromWei(governanceTokenBeforeBalance.add(fillAmount.sub(traderGetAmountOut(singleTradeAmount, rate)))), "Amount wasn't correctly added to the governance");
 
 			//////////////
 			//Cancel
@@ -438,17 +438,17 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const traderTokenAAfterRefundBalance = await tokenA.balanceOf(trader);
 			assert.equal(fromWei(traderTokenAAfterRefundBalance), fromWei(traderTokenAAfterBalance.add(amount.sub(singleTradeAmount))), "Amount wasn't correctly refunded to the trader");
 
-			const afterfulfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
-			assert.equal(afterfulfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
+			const afterfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
+			assert.equal(afterfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
 
-			const afterfulfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
-			assert.equal(afterfulfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
+			const afterfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
+			assert.equal(afterfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
-		it("should correctly trade -> change rate -> fulfill -> cancel", async function () {
+		it("should correctly trade -> change rate -> fill -> cancel", async function () {
 			const amount = new BN("2000000000000000000"); //2
 			const oldRate = new BN("30000000000000000"); //0.03
 			const rate = new BN("40000000000000000"); //0.04
@@ -467,14 +467,14 @@ contract("KeepTradeV1Core", async (accounts) => {
 			assert.equal(fromWei(trade.rate), fromWei(rate), "Trade rate not equal");
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
 			const singleTradeAmount = amount.div(new BN("2"));
-			const fulfillAmount = await keeperGetAmountIn(keepTrade, singleTradeAmount, keeperKPTRBalance, traderKPTRBalance, rate);
+			const fillAmount = await keeperGetAmountIn(keepTrade, singleTradeAmount, keeperKPTRBalance, traderKPTRBalance, rate);
 
-			await tokenB.approve(keepTrade.address, fulfillAmount, { from: keeper });
+			await tokenB.approve(keepTrade.address, fillAmount, { from: keeper });
 
-			await keepTrade.fulfillTradeTokensForTokens(tradeId, fulfillAmount, { from: keeper });
+			await keepTrade.fillTradeTokensForTokens(tradeId, fillAmount, { from: keeper });
 
 			const traderTokenBAfterBalance = await tokenB.balanceOf(trader);
 			const keeperTokenAAfterBalance = await tokenA.balanceOf(keeper);
@@ -482,8 +482,8 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const governanceTokenAfterBalance = await tokenB.balanceOf(await keepTrade.governance());
 			assert.equal(fromWei(traderTokenBAfterBalance), fromWei(traderTokenBBeforeBalance.add(traderGetAmountOut(singleTradeAmount, rate))), "Amount wasn't correctly added to the trader");
 			assert.equal(fromWei(keeperTokenAAfterBalance), fromWei(keeperTokenABeforeBalance.add(singleTradeAmount)), "Amount wasn't correctly added to the keeper");
-			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fulfillAmount)), "Amount wasn't correctly taken from the keeper");
-			assert.equal(fromWei(governanceTokenAfterBalance), fromWei(governanceTokenBeforeBalance.add(fulfillAmount.sub(traderGetAmountOut(singleTradeAmount, rate)))), "Amount wasn't correctly added to the governance");
+			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fillAmount)), "Amount wasn't correctly taken from the keeper");
+			assert.equal(fromWei(governanceTokenAfterBalance), fromWei(governanceTokenBeforeBalance.add(fillAmount.sub(traderGetAmountOut(singleTradeAmount, rate)))), "Amount wasn't correctly added to the governance");
 
 			//////////////
 			//Cancel
@@ -493,11 +493,11 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const traderTokenAAfterRefundBalance = await tokenA.balanceOf(trader);
 			assert.equal(fromWei(traderTokenAAfterRefundBalance), fromWei(traderTokenAAfterBalance.add(amount.sub(singleTradeAmount))), "Amount wasn't correctly refunded to the trader");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
-		it("should trade correctly when modify requirement / fees / rate / fulfill at any time", async function () {
+		it("should trade correctly when modify requirement / fees / rate / fill at any time", async function () {
 			const amount = new BN("2000000000000000010"); //2
 			const oldRate = new BN("30000000000000000"); //0.03
 			const rate = new BN("40000000000000000"); //0.04
@@ -511,12 +511,12 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const tradeId = tradeInfo.logs[0].args[0].toNumber();
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
 			const singleTradeAmount = amount.div(new BN("4"));
-			const fulfillAmount1 = await keeperGetAmountIn(keepTrade, singleTradeAmount, keeperKPTRBalance, traderKPTRBalance, oldRate);
-			await tokenB.approve(keepTrade.address, fulfillAmount1, { from: keeper });
-			await keepTrade.fulfillTradeTokensForTokens(tradeId, fulfillAmount1, { from: keeper });
+			const fillAmount1 = await keeperGetAmountIn(keepTrade, singleTradeAmount, keeperKPTRBalance, traderKPTRBalance, oldRate);
+			await tokenB.approve(keepTrade.address, fillAmount1, { from: keeper });
+			await keepTrade.fillTradeTokensForTokens(tradeId, fillAmount1, { from: keeper });
 
 			//////////////
 			//Change rate
@@ -537,13 +537,13 @@ contract("KeepTradeV1Core", async (accounts) => {
 			keeperKPTRBalance = await keepTradeToken.balanceOf(keeper);
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
-			const fulfillAmount2 = await keeperGetAmountIn(keepTrade, amount.sub(singleTradeAmount), keeperKPTRBalance, traderKPTRBalance, rate);
+			const fillAmount2 = await keeperGetAmountIn(keepTrade, amount.sub(singleTradeAmount), keeperKPTRBalance, traderKPTRBalance, rate);
 
-			await tokenB.approve(keepTrade.address, fulfillAmount2, { from: keeper });
+			await tokenB.approve(keepTrade.address, fillAmount2, { from: keeper });
 
-			await keepTrade.fulfillTradeTokensForTokens(tradeId, fulfillAmount2, { from: keeper });
+			await keepTrade.fillTradeTokensForTokens(tradeId, fillAmount2, { from: keeper });
 
 			const traderTokenAAfterRefundBalance = await tokenA.balanceOf(trader);
 			const traderTokenBAfterBalance = await tokenB.balanceOf(trader);
@@ -556,11 +556,11 @@ contract("KeepTradeV1Core", async (accounts) => {
 
 			assert.equal(fromWei(traderTokenBAfterBalance), fromWei(traderTokenBBeforeBalance.add(traderGetAmountOut(singleTradeAmount, oldRate).add(traderGetAmountOut(amount.sub(singleTradeAmount), rate)))), "Amount wasn't correctly added to the trader");
 			assert.equal(fromWei(keeperTokenAAfterBalance), fromWei(keeperTokenABeforeBalance.add(amount.sub(new BN("10")))), "Amount wasn't correctly added to the keeper");
-			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fulfillAmount1.add(fulfillAmount2))), "Amount wasn't correctly taken from the keeper");
-			assert.equal(fromWei(governanceTokenAfterBalance), fromWei(governanceTokenBeforeBalance.add(fulfillAmount1.sub(traderGetAmountOut(singleTradeAmount, oldRate))).add(fulfillAmount2.sub(traderGetAmountOut(amount.sub(singleTradeAmount), rate)))), "Amount wasn't correctly added to the governance");
+			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fillAmount1.add(fillAmount2))), "Amount wasn't correctly taken from the keeper");
+			assert.equal(fromWei(governanceTokenAfterBalance), fromWei(governanceTokenBeforeBalance.add(fillAmount1.sub(traderGetAmountOut(singleTradeAmount, oldRate))).add(fillAmount2.sub(traderGetAmountOut(amount.sub(singleTradeAmount), rate)))), "Amount wasn't correctly added to the governance");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 
 			//////////////
 			//Change fees
@@ -576,7 +576,7 @@ contract("KeepTradeV1Core", async (accounts) => {
 			keeperKPTRBalance = await keepTradeToken.balanceOf(keeper);
 		});
 
-		it("should throw error when fulfill with invalid trade ID", async function () {
+		it("should throw error when fill with invalid trade ID", async function () {
 			const amount = new BN("2000000000000000010"); //2
 			const rate = new BN("40000000000000000"); //0.04
 
@@ -586,14 +586,14 @@ contract("KeepTradeV1Core", async (accounts) => {
 
 
 			await truffleAssert.reverts(
-				keepTrade.fulfillTradeTokensForTokens(tradeId+1, "100000", { from: keeper }),
+				keepTrade.fillTradeTokensForTokens(tradeId+1, "100000", { from: keeper }),
 				"Invalid trade ID"
 			);
 
 			await keepTrade.cancelTrades([tradeId], { from: trader });
 		});
 
-		it("should throw error when fulfill with invalid trade type", async function () {
+		it("should throw error when fill with invalid trade type", async function () {
 			const amount = new BN("2000000000000000010"); //2
 			const rate = new BN("40000000000000000"); //0.04
 
@@ -603,12 +603,12 @@ contract("KeepTradeV1Core", async (accounts) => {
 
 
 			await truffleAssert.reverts(
-				keepTrade.fulfillTradeTokensForETH(tradeId, { from: keeper }),
+				keepTrade.fillTradeTokensForETH(tradeId, { from: keeper }),
 				"Invalid trade type"
 			);
 
 			await truffleAssert.reverts(
-				keepTrade.fulfillTradeETHForTokens(tradeId, "1000", { from: keeper }),
+				keepTrade.fillTradeETHForTokens(tradeId, "1000", { from: keeper }),
 				"Invalid trade type"
 			);
 
@@ -641,7 +641,7 @@ contract("KeepTradeV1Core", async (accounts) => {
 			beforeAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
 		});
 
-		it("should trade correctly when fulfill at once", async function () {
+		it("should trade correctly when fill at once", async function () {
 			const amount = new BN("1000000000000000000"); //1
 			const rate = new BN("50000000000000000"); //0.05
 
@@ -673,29 +673,29 @@ contract("KeepTradeV1Core", async (accounts) => {
 			assert.equal(trade.addressTradeIndex.toNumber(), afterAddressTradeCount - 1 , "Trade addressTradeIndex should be the last index");
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
-			const fulfillAmount = amount.mul(rate).div(new BN("1000000000000000000"));
+			const fillAmount = amount.mul(rate).div(new BN("1000000000000000000"));
 
-			await tokenB.approve(keepTrade.address, fulfillAmount, { from: keeper });
+			await tokenB.approve(keepTrade.address, fillAmount, { from: keeper });
 
-			await keepTrade.fulfillTradeETHForTokens(tradeId, fulfillAmount, { from: keeper });
+			await keepTrade.fillTradeETHForTokens(tradeId, fillAmount, { from: keeper });
 
 			const traderTokenBAfterBalance = await tokenB.balanceOf(trader);
 			const keeperTokenBAfterBalance = await tokenB.balanceOf(keeper);
 			const governanceEthAfterBalance = await web3.eth.getBalance(governance);
 			assert.equal(fromWei(traderTokenBAfterBalance), fromWei(traderTokenBBeforeBalance.add(traderGetAmountOut(amount, rate))), "Amount wasn't correctly added to the trader");
-			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fulfillAmount)), "Amount wasn't correctly taken from the keeper");
+			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fillAmount)), "Amount wasn't correctly taken from the keeper");
 			assert.equal(fromWei(governanceEthAfterBalance), fromWei(governanceEthBeforeBalance.add(amount.sub(await keeperGetAmountEth(keepTrade, amount, keeperKPTRBalance, traderKPTRBalance)))), "Amount wasn't correctly added to the governance");
 
-			const afterfulfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
-			assert.equal(afterfulfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
+			const afterfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
+			assert.equal(afterfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
 
-			const afterfulfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
-			assert.equal(afterfulfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
+			const afterfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
+			assert.equal(afterfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
 		it("should trade correctly when refund required", async function () {
@@ -725,28 +725,28 @@ contract("KeepTradeV1Core", async (accounts) => {
 			assert.equal(trade.addressTradeIndex.toNumber(), afterAddressTradeCount - 1 , "Trade addressTradeIndex should be the last index");
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
 			const traderEthBeforeBalance = new BN(await web3.eth.getBalance(trader));
-			const fulfillAmount = amount.mul(rate).div(new BN("1000000000000000000"));
-			await tokenB.approve(keepTrade.address, fulfillAmount, { from: keeper });
-			await keepTrade.fulfillTradeETHForTokens(tradeId, fulfillAmount, { from: keeper });
+			const fillAmount = amount.mul(rate).div(new BN("1000000000000000000"));
+			await tokenB.approve(keepTrade.address, fillAmount, { from: keeper });
+			await keepTrade.fillTradeETHForTokens(tradeId, fillAmount, { from: keeper });
 
 			const traderEthAfterBalance = new BN(await web3.eth.getBalance(trader));
 			const traderTokenBAfterBalance = await tokenB.balanceOf(trader);
 			const keeperTokenBAfterBalance = await tokenB.balanceOf(keeper);
 			assert.equal(fromWei(traderTokenBAfterBalance), fromWei(traderTokenBBeforeBalance.add(traderGetAmountOut(amount, rate))), "Amount wasn't correctly added to the trader");
-			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fulfillAmount)), "Amount wasn't correctly taken from the keeper");
+			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fillAmount)), "Amount wasn't correctly taken from the keeper");
 			assert.equal(fromWei(traderEthAfterBalance), fromWei(traderEthBeforeBalance.add(new BN("100"))), "Amount wasn't correctly added to the trader");
 
-			const afterfulfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
-			assert.equal(afterfulfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
+			const afterfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
+			assert.equal(afterfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
 
-			const afterfulfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
-			assert.equal(afterfulfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
+			const afterfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
+			assert.equal(afterfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
 		it("should cancel correctly and refund", async function () {
@@ -775,17 +775,17 @@ contract("KeepTradeV1Core", async (accounts) => {
 
 			assert.equal(parseFloat(fromWei(traderEthAfterRefundBalance)).toFixed(1), parseFloat(fromWei(traderEthBeforeRefundBalance.add(amount))).toFixed(1), "Amount wasn't correctly refunded to the trader");
 
-			const afterfulfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
-			assert.equal(afterfulfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
+			const afterfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
+			assert.equal(afterfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
 
-			const afterfulfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
-			assert.equal(afterfulfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
+			const afterfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
+			assert.equal(afterfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
-		it("should correctly trade -> fulfill -> cancel", async function () {
+		it("should correctly trade -> fill -> cancel", async function () {
 			const amount = new BN("2000000000000000000"); //2
 			const rate = new BN("30000000000000000"); //0.03
 
@@ -795,19 +795,19 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const afterAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
 			const singleTradeAmount = amount.div(new BN("2"));
-			const fulfillAmount = singleTradeAmount.mul(rate).div(new BN("1000000000000000000"));
+			const fillAmount = singleTradeAmount.mul(rate).div(new BN("1000000000000000000"));
 
-			await tokenB.approve(keepTrade.address, fulfillAmount, { from: keeper });
-			await keepTrade.fulfillTradeETHForTokens(tradeId, fulfillAmount, { from: keeper });
+			await tokenB.approve(keepTrade.address, fillAmount, { from: keeper });
+			await keepTrade.fillTradeETHForTokens(tradeId, fillAmount, { from: keeper });
 
 			const traderTokenBAfterBalance = await tokenB.balanceOf(trader);
 			const keeperTokenBAfterBalance = await tokenB.balanceOf(keeper);
 			const governanceEthAfterBalance = await web3.eth.getBalance(governance);
 			assert.equal(fromWei(traderTokenBAfterBalance), fromWei(traderTokenBBeforeBalance.add(traderGetAmountOut(singleTradeAmount, rate))), "Amount wasn't correctly added to the trader");
-			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fulfillAmount)), "Amount wasn't correctly taken from the keeper");
+			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fillAmount)), "Amount wasn't correctly taken from the keeper");
 			assert.equal(fromWei(governanceEthAfterBalance), fromWei(governanceEthBeforeBalance.add(singleTradeAmount.sub(await keeperGetAmountEth(keepTrade, singleTradeAmount, keeperKPTRBalance, traderKPTRBalance)))), "Amount wasn't correctly added to the governance");
 
 			//////////////
@@ -819,17 +819,17 @@ contract("KeepTradeV1Core", async (accounts) => {
 
 			assert.equal(parseFloat(fromWei(traderEthAfterRefundBalance)).toFixed(1), parseFloat(fromWei(traderEthBeforeRefundBalance.add(amount).sub(singleTradeAmount))).toFixed(1), "Amount wasn't correctly refunded to the trader");
 
-			const afterfulfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
-			assert.equal(afterfulfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
+			const afterfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
+			assert.equal(afterfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
 
-			const afterfulfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
-			assert.equal(afterfulfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
+			const afterfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
+			assert.equal(afterfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
-		it("should correctly trade -> change rate -> fulfill -> cancel", async function () {
+		it("should correctly trade -> change rate -> fill -> cancel", async function () {
 			const amount = new BN("2000000000000000000"); //2
 			const oldRate = new BN("30000000000000000"); //0.03
 			const rate = new BN("40000000000000000"); //0.04
@@ -845,20 +845,20 @@ contract("KeepTradeV1Core", async (accounts) => {
 			assert.equal(fromWei(trade.rate), fromWei(rate), "Trade rate not equal");
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
 			const singleTradeAmount = amount.div(new BN("2"));
-			const fulfillAmount = singleTradeAmount.mul(rate).div(new BN("1000000000000000000"));
+			const fillAmount = singleTradeAmount.mul(rate).div(new BN("1000000000000000000"));
 
-			await tokenB.approve(keepTrade.address, fulfillAmount, { from: keeper });
-			await keepTrade.fulfillTradeETHForTokens(tradeId, fulfillAmount, { from: keeper });
+			await tokenB.approve(keepTrade.address, fillAmount, { from: keeper });
+			await keepTrade.fillTradeETHForTokens(tradeId, fillAmount, { from: keeper });
 
 
 			const traderTokenBAfterBalance = await tokenB.balanceOf(trader);
 			const keeperTokenBAfterBalance = await tokenB.balanceOf(keeper);
 			const governanceEthAfterBalance = await web3.eth.getBalance(governance);
 			assert.equal(fromWei(traderTokenBAfterBalance), fromWei(traderTokenBBeforeBalance.add(traderGetAmountOut(singleTradeAmount, rate))), "Amount wasn't correctly added to the trader");
-			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fulfillAmount)), "Amount wasn't correctly taken from the keeper");
+			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fillAmount)), "Amount wasn't correctly taken from the keeper");
 			assert.equal(fromWei(governanceEthAfterBalance), fromWei(governanceEthBeforeBalance.add(singleTradeAmount.sub(await keeperGetAmountEth(keepTrade, singleTradeAmount, keeperKPTRBalance, traderKPTRBalance)))), "Amount wasn't correctly added to the governance");
 
 			//////////////
@@ -869,11 +869,11 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const traderEthAfterRefundBalance = new BN(await web3.eth.getBalance(trader));
 
 			assert.equal(parseFloat(fromWei(traderEthAfterRefundBalance)).toFixed(1), parseFloat(fromWei(traderEthBeforeRefundBalance.add(amount).sub(singleTradeAmount))).toFixed(1), "Amount wasn't correctly refunded to the trader");
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
-		it("should trade correctly when modify requirement / fees / rate / fulfill at any time", async function () {
+		it("should trade correctly when modify requirement / fees / rate / fill at any time", async function () {
 			const amount = new BN("2000000000000000010"); //2
 			const oldRate = new BN("30000000000000000"); //0.03
 			const rate = new BN("40000000000000000"); //0.04
@@ -886,12 +886,12 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const tradeId = tradeInfo.logs[0].args[0].toNumber();
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
 			const singleTradeAmount = amount.div(new BN("4"));
-			const fulfillAmount1 = singleTradeAmount.mul(oldRate).div(new BN("1000000000000000000"));
-			await tokenB.approve(keepTrade.address, fulfillAmount1, { from: keeper });
-			await keepTrade.fulfillTradeETHForTokens(tradeId, fulfillAmount1, { from: keeper });
+			const fillAmount1 = singleTradeAmount.mul(oldRate).div(new BN("1000000000000000000"));
+			await tokenB.approve(keepTrade.address, fillAmount1, { from: keeper });
+			await keepTrade.fillTradeETHForTokens(tradeId, fillAmount1, { from: keeper });
 
 			//////////////
 			//Change rate
@@ -912,13 +912,13 @@ contract("KeepTradeV1Core", async (accounts) => {
 			keeperKPTRBalance = await keepTradeToken.balanceOf(keeper);
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
-			const fulfillAmount2 = amount.sub(singleTradeAmount).mul(rate).div(new BN("1000000000000000000"));
-			await tokenB.approve(keepTrade.address, fulfillAmount2, { from: keeper });
+			const fillAmount2 = amount.sub(singleTradeAmount).mul(rate).div(new BN("1000000000000000000"));
+			await tokenB.approve(keepTrade.address, fillAmount2, { from: keeper });
 
 			const traderEthBeforeRefundBalance = new BN(await web3.eth.getBalance(trader));
-			await keepTrade.fulfillTradeETHForTokens(tradeId, fulfillAmount2, { from: keeper });
+			await keepTrade.fillTradeETHForTokens(tradeId, fillAmount2, { from: keeper });
 			const traderEthAfterRefundBalance = new BN(await web3.eth.getBalance(trader));
 
 
@@ -929,10 +929,10 @@ contract("KeepTradeV1Core", async (accounts) => {
 			assert.equal(fromWei(traderEthAfterRefundBalance), fromWei(traderEthBeforeRefundBalance.add(new BN("10"))), "Amount wasn't correctly added to the trader");
 			assert.equal(fromWei(traderTokenBAfterBalance), fromWei(traderTokenBBeforeBalance.add(traderGetAmountOut(singleTradeAmount, oldRate).add(traderGetAmountOut(amount.sub(singleTradeAmount), rate)))), "Amount wasn't correctly added to the trader");
 
-			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fulfillAmount1.add(fulfillAmount2))), "Amount wasn't correctly taken from the keeper");
+			assert.equal(fromWei(keeperTokenBAfterBalance), fromWei(keeperTokenBBeforeBalance.sub(fillAmount1.add(fillAmount2))), "Amount wasn't correctly taken from the keeper");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 
 
 			//////////////
@@ -949,7 +949,7 @@ contract("KeepTradeV1Core", async (accounts) => {
 			keeperKPTRBalance = await keepTradeToken.balanceOf(keeper);
 		});
 
-		it("should throw error when fulfill with invalid trade ID", async function () {
+		it("should throw error when fill with invalid trade ID", async function () {
 			const amount = new BN("2000000000000000010"); //2
 			const rate = new BN("40000000000000000"); //0.04
 
@@ -959,14 +959,14 @@ contract("KeepTradeV1Core", async (accounts) => {
 
 
 			await truffleAssert.reverts(
-				keepTrade.fulfillTradeETHForTokens(tradeId+1, "100000", { from: keeper }),
+				keepTrade.fillTradeETHForTokens(tradeId+1, "100000", { from: keeper }),
 				"Invalid trade ID"
 			);
 
 			await keepTrade.cancelTrades([tradeId], { from: trader });
 		});
 
-		it("should throw error when fulfill with invalid trade type", async function () {
+		it("should throw error when fill with invalid trade type", async function () {
 			const amount = new BN("2000000000000000010"); //2
 			const rate = new BN("40000000000000000"); //0.04
 
@@ -976,12 +976,12 @@ contract("KeepTradeV1Core", async (accounts) => {
 
 
 			await truffleAssert.reverts(
-				keepTrade.fulfillTradeTokensForETH(tradeId, { from: keeper }),
+				keepTrade.fillTradeTokensForETH(tradeId, { from: keeper }),
 				"Invalid trade type"
 			);
 
 			await truffleAssert.reverts(
-				keepTrade.fulfillTradeTokensForTokens(tradeId, "1000", { from: keeper }),
+				keepTrade.fillTradeTokensForTokens(tradeId, "1000", { from: keeper }),
 				"Invalid trade type"
 			);
 
@@ -1013,7 +1013,7 @@ contract("KeepTradeV1Core", async (accounts) => {
 			beforeAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
 		});
 
-		it("should trade correctly when fulfill at once", async function () {
+		it("should trade correctly when fill at once", async function () {
 			const amount = new BN("1000000000000000000"); //1
 			const rate = new BN("50000000000000000"); //0.05
 
@@ -1052,12 +1052,12 @@ contract("KeepTradeV1Core", async (accounts) => {
 			assert.equal(trade.addressTradeIndex.toNumber(), afterAddressTradeCount - 1 , "Trade addressTradeIndex should be the last index");
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
 			const traderEthBeforeBalance = new BN(await web3.eth.getBalance(trader));
-			const fulfillAmount = await keeperGetAmountIn(keepTrade, amount, keeperKPTRBalance, traderKPTRBalance, rate);
+			const fillAmount = await keeperGetAmountIn(keepTrade, amount, keeperKPTRBalance, traderKPTRBalance, rate);
 
-			await keepTrade.fulfillTradeTokensForETH(tradeId, { from: keeper, value: fulfillAmount });
+			await keepTrade.fillTradeTokensForETH(tradeId, { from: keeper, value: fillAmount });
 
 			const traderEthAfterBalance = new BN(await web3.eth.getBalance(trader));
 			const keeperTokenAAfterBalance = await tokenA.balanceOf(keeper);
@@ -1065,16 +1065,16 @@ contract("KeepTradeV1Core", async (accounts) => {
 
 			assert.equal(fromWei(traderEthAfterBalance), fromWei(traderEthBeforeBalance.add(traderGetAmountOut(amount, rate))), "Amount wasn't correctly added to the trader");
 			assert.equal(fromWei(keeperTokenAAfterBalance), fromWei(keeperTokenABeforeBalance.add(amount)), "Amount wasn't correctly added to the keeper");
-			assert.equal(fromWei(governanceEthAfterBalance), fromWei(governanceEthBeforeBalance.add(fulfillAmount.sub(traderGetAmountOut(amount, rate)))), "Amount wasn't correctly added to the governance");
+			assert.equal(fromWei(governanceEthAfterBalance), fromWei(governanceEthBeforeBalance.add(fillAmount.sub(traderGetAmountOut(amount, rate)))), "Amount wasn't correctly added to the governance");
 
-			const afterfulfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
-			assert.equal(afterfulfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
+			const afterfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
+			assert.equal(afterfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
 
-			const afterfulfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
-			assert.equal(afterfulfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
+			const afterfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
+			assert.equal(afterfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
 		it("should trade correctly when refund required", async function () {
@@ -1109,12 +1109,12 @@ contract("KeepTradeV1Core", async (accounts) => {
 			assert.equal(trade.addressTradeIndex.toNumber(), afterAddressTradeCount - 1 , "Trade addressTradeIndex should be the last index");
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
 			const traderEthBeforeBalance = new BN(await web3.eth.getBalance(trader));
-			const fulfillAmount = await keeperGetAmountIn(keepTrade, amount, keeperKPTRBalance, traderKPTRBalance, rate);
+			const fillAmount = await keeperGetAmountIn(keepTrade, amount, keeperKPTRBalance, traderKPTRBalance, rate);
 
-			await keepTrade.fulfillTradeTokensForETH(tradeId, { from: keeper, value: fulfillAmount });
+			await keepTrade.fillTradeTokensForETH(tradeId, { from: keeper, value: fillAmount });
 
 			const traderEthAfterBalance = new BN(await web3.eth.getBalance(trader));
 			const keeperTokenAAfterBalance = await tokenA.balanceOf(keeper);
@@ -1123,17 +1123,17 @@ contract("KeepTradeV1Core", async (accounts) => {
 
 			assert.equal(fromWei(traderEthAfterBalance), fromWei(traderEthBeforeBalance.add(traderGetAmountOut(amount, rate))), "Amount wasn't correctly added to the trader");
 			assert.equal(fromWei(keeperTokenAAfterBalance), fromWei(keeperTokenABeforeBalance.add(new BN("1000"))), "Amount wasn't correctly added to the keeper");
-			assert.equal(fromWei(governanceEthAfterBalance), fromWei(governanceEthBeforeBalance.add(fulfillAmount.sub(traderGetAmountOut(amount, rate)))), "Amount wasn't correctly added to the governance");
+			assert.equal(fromWei(governanceEthAfterBalance), fromWei(governanceEthBeforeBalance.add(fillAmount.sub(traderGetAmountOut(amount, rate)))), "Amount wasn't correctly added to the governance");
 			assert.equal(fromWei(traderTokenAAfterRefundBalance), fromWei(traderTokenAAfterBalance.add(new BN("100"))), "Amount wasn't correctly refunded to the trader");
 
-			const afterfulfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
-			assert.equal(afterfulfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
+			const afterfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
+			assert.equal(afterfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
 
-			const afterfulfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
-			assert.equal(afterfulfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
+			const afterfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
+			assert.equal(afterfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
 		it("should cancel correctly and refund", async function () {
@@ -1165,17 +1165,17 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const traderTokenAAfterRefundBalance = await tokenA.balanceOf(trader);
 			assert.equal(fromWei(traderTokenAAfterRefundBalance), fromWei(traderTokenABeforeBalance), "Amount wasn't correctly refunded to the trader");
 
-			const afterfulfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
-			assert.equal(afterfulfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
+			const afterfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
+			assert.equal(afterfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
 
-			const afterfulfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
-			assert.equal(afterfulfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
+			const afterfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
+			assert.equal(afterfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
-		it("should correctly trade -> fulfill -> cancel", async function () {
+		it("should correctly trade -> fill -> cancel", async function () {
 			const amount = new BN("2000000000000000000"); //2
 			const rate = new BN("30000000000000000"); //0.03
 
@@ -1190,13 +1190,13 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const afterAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
 			const singleTradeAmount = amount.div(new BN("2"));
 			const traderEthBeforeBalance = new BN(await web3.eth.getBalance(trader));
-			const fulfillAmount = await keeperGetAmountIn(keepTrade, singleTradeAmount, keeperKPTRBalance, traderKPTRBalance, rate);
+			const fillAmount = await keeperGetAmountIn(keepTrade, singleTradeAmount, keeperKPTRBalance, traderKPTRBalance, rate);
 
-			await keepTrade.fulfillTradeTokensForETH(tradeId, { from: keeper, value: fulfillAmount });
+			await keepTrade.fillTradeTokensForETH(tradeId, { from: keeper, value: fillAmount });
 
 			const traderEthAfterBalance = new BN(await web3.eth.getBalance(trader));
 			const keeperTokenAAfterBalance = await tokenA.balanceOf(keeper);
@@ -1204,7 +1204,7 @@ contract("KeepTradeV1Core", async (accounts) => {
 
 			assert.equal(fromWei(traderEthAfterBalance), fromWei(traderEthBeforeBalance.add(traderGetAmountOut(singleTradeAmount, rate))), "Amount wasn't correctly added to the trader");
 			assert.equal(fromWei(keeperTokenAAfterBalance), fromWei(keeperTokenABeforeBalance.add(singleTradeAmount)), "Amount wasn't correctly added to the keeper");
-			assert.equal(fromWei(governanceEthAfterBalance), fromWei(governanceEthBeforeBalance.add(fulfillAmount.sub(traderGetAmountOut(singleTradeAmount, rate)))), "Amount wasn't correctly added to the governance");
+			assert.equal(fromWei(governanceEthAfterBalance), fromWei(governanceEthBeforeBalance.add(fillAmount.sub(traderGetAmountOut(singleTradeAmount, rate)))), "Amount wasn't correctly added to the governance");
 
 			//////////////
 			//Cancel
@@ -1214,17 +1214,17 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const traderTokenAAfterRefundBalance = await tokenA.balanceOf(trader);
 			assert.equal(fromWei(traderTokenAAfterRefundBalance), fromWei(traderTokenAAfterBalance.add(amount.sub(singleTradeAmount))), "Amount wasn't correctly refunded to the trader");
 
-			const afterfulfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
-			assert.equal(afterfulfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
+			const afterfillCurrentTradeCount = (await keepTrade.getCurrentTradeCount()).toNumber();
+			assert.equal(afterfillCurrentTradeCount, afterCurrentTradeCount - 1, "Current trade array length should decreased by 1");
 
-			const afterfulfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
-			assert.equal(afterfulfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
+			const afterfillAddressTradeCount = (await keepTrade.getCurrentTradeCountByAddress(trader)).toNumber();
+			assert.equal(afterfillAddressTradeCount, afterAddressTradeCount - 1, "Address trade array length should decreased by 1");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
-		it("should correctly trade -> change rate -> fulfill -> cancel", async function () {
+		it("should correctly trade -> change rate -> fill -> cancel", async function () {
 			const amount = new BN("2000000000000000000"); //2
 			const oldRate = new BN("30000000000000000"); //0.03
 			const rate = new BN("40000000000000000"); //0.04
@@ -1243,13 +1243,13 @@ contract("KeepTradeV1Core", async (accounts) => {
 			assert.equal(fromWei(trade.rate), fromWei(rate), "Trade rate not equal");
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
 			const singleTradeAmount = amount.div(new BN("2"));
 			const traderEthBeforeBalance = new BN(await web3.eth.getBalance(trader));
-			const fulfillAmount = await keeperGetAmountIn(keepTrade, singleTradeAmount, keeperKPTRBalance, traderKPTRBalance, rate);
+			const fillAmount = await keeperGetAmountIn(keepTrade, singleTradeAmount, keeperKPTRBalance, traderKPTRBalance, rate);
 
-			await keepTrade.fulfillTradeTokensForETH(tradeId, { from: keeper, value: fulfillAmount });
+			await keepTrade.fillTradeTokensForETH(tradeId, { from: keeper, value: fillAmount });
 
 			const traderEthAfterBalance = new BN(await web3.eth.getBalance(trader));
 			const keeperTokenAAfterBalance = await tokenA.balanceOf(keeper);
@@ -1257,7 +1257,7 @@ contract("KeepTradeV1Core", async (accounts) => {
 
 			assert.equal(fromWei(traderEthAfterBalance), fromWei(traderEthBeforeBalance.add(traderGetAmountOut(singleTradeAmount, rate))), "Amount wasn't correctly added to the trader");
 			assert.equal(fromWei(keeperTokenAAfterBalance), fromWei(keeperTokenABeforeBalance.add(singleTradeAmount)), "Amount wasn't correctly added to the keeper");
-			assert.equal(fromWei(governanceEthAfterBalance), fromWei(governanceEthBeforeBalance.add(fulfillAmount.sub(traderGetAmountOut(singleTradeAmount, rate)))), "Amount wasn't correctly added to the governance");
+			assert.equal(fromWei(governanceEthAfterBalance), fromWei(governanceEthBeforeBalance.add(fillAmount.sub(traderGetAmountOut(singleTradeAmount, rate)))), "Amount wasn't correctly added to the governance");
 
 			//////////////
 			//Cancel
@@ -1267,11 +1267,11 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const traderTokenAAfterRefundBalance = await tokenA.balanceOf(trader);
 			assert.equal(fromWei(traderTokenAAfterRefundBalance), fromWei(traderTokenAAfterBalance.add(amount.sub(singleTradeAmount))), "Amount wasn't correctly refunded to the trader");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 		});
 
-		it("should trade correctly when modify requirement / fees / rate / fulfill at any time", async function () {
+		it("should trade correctly when modify requirement / fees / rate / fill at any time", async function () {
 			const amount = new BN("2000000000000000010"); //2
 			const oldRate = new BN("30000000000000000"); //0.03
 			const rate = new BN("40000000000000000"); //0.04
@@ -1285,11 +1285,11 @@ contract("KeepTradeV1Core", async (accounts) => {
 			const tradeId = tradeInfo.logs[0].args[0].toNumber();
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
 			const singleTradeAmount = amount.div(new BN("4"));
-			const fulfillAmount1 = await keeperGetAmountIn(keepTrade, singleTradeAmount, keeperKPTRBalance, traderKPTRBalance, oldRate);
-			await keepTrade.fulfillTradeTokensForETH(tradeId, { from: keeper, value: fulfillAmount1 });
+			const fillAmount1 = await keeperGetAmountIn(keepTrade, singleTradeAmount, keeperKPTRBalance, traderKPTRBalance, oldRate);
+			await keepTrade.fillTradeTokensForETH(tradeId, { from: keeper, value: fillAmount1 });
 
 			//////////////
 			//Change rate
@@ -1310,12 +1310,12 @@ contract("KeepTradeV1Core", async (accounts) => {
 			keeperKPTRBalance = await keepTradeToken.balanceOf(keeper);
 
 			//////////////
-			//fulfill
+			//fill
 			//////////////
-			const fulfillAmount2 = await keeperGetAmountIn(keepTrade, amount.sub(singleTradeAmount), keeperKPTRBalance, traderKPTRBalance, rate);
+			const fillAmount2 = await keeperGetAmountIn(keepTrade, amount.sub(singleTradeAmount), keeperKPTRBalance, traderKPTRBalance, rate);
 			const traderEthBeforeBalance = new BN(await web3.eth.getBalance(trader));
 
-			await keepTrade.fulfillTradeTokensForETH(tradeId, { from: keeper, value: fulfillAmount2 });
+			await keepTrade.fillTradeTokensForETH(tradeId, { from: keeper, value: fillAmount2 });
 
 			const trade = await keepTrade.trades(tradeId);
 
@@ -1327,8 +1327,8 @@ contract("KeepTradeV1Core", async (accounts) => {
 			assert.equal(fromWei(traderEthAfterBalance), fromWei(traderEthBeforeBalance.add(traderGetAmountOut(amount.sub(singleTradeAmount), rate))), "Amount wasn't correctly added to the trader");
 			assert.equal(fromWei(keeperTokenAAfterBalance), fromWei(keeperTokenABeforeBalance.add(amount.sub(new BN("10")))), "Amount wasn't correctly added to the keeper");
 
-			const afterfulfillTrade = await keepTrade.trades(tradeId);
-			assert.equal(fromWei(afterfulfillTrade.totalFromAmount), "0", "Trade should be deleted");
+			const afterfillTrade = await keepTrade.trades(tradeId);
+			assert.equal(fromWei(afterfillTrade.totalFromAmount), "0", "Trade should be deleted");
 
 			//////////////
 			//Change fees
@@ -1344,7 +1344,7 @@ contract("KeepTradeV1Core", async (accounts) => {
 			keeperKPTRBalance = await keepTradeToken.balanceOf(keeper);
 		});
 
-		it("should throw error when fulfill with invalid trade ID", async function () {
+		it("should throw error when fill with invalid trade ID", async function () {
 			const amount = new BN("2000000000000000010"); //2
 			const rate = new BN("40000000000000000"); //0.04
 
@@ -1354,14 +1354,14 @@ contract("KeepTradeV1Core", async (accounts) => {
 
 
 			await truffleAssert.reverts(
-				keepTrade.fulfillTradeTokensForETH(tradeId+1, { from: keeper, value: "100000" }),
+				keepTrade.fillTradeTokensForETH(tradeId+1, { from: keeper, value: "100000" }),
 				"Invalid trade ID"
 			);
 
 			await keepTrade.cancelTrades([tradeId], { from: trader });
 		});
 
-		it("should throw error when fulfill with invalid trade type", async function () {
+		it("should throw error when fill with invalid trade type", async function () {
 			const amount = new BN("2000000000000000010"); //2
 			const rate = new BN("40000000000000000"); //0.04
 
@@ -1371,12 +1371,12 @@ contract("KeepTradeV1Core", async (accounts) => {
 
 
 			await truffleAssert.reverts(
-				keepTrade.fulfillTradeTokensForTokens(tradeId, "1000", { from: keeper }),
+				keepTrade.fillTradeTokensForTokens(tradeId, "1000", { from: keeper }),
 				"Invalid trade type"
 			);
 
 			await truffleAssert.reverts(
-				keepTrade.fulfillTradeETHForTokens(tradeId, "1000", { from: keeper }),
+				keepTrade.fillTradeETHForTokens(tradeId, "1000", { from: keeper }),
 				"Invalid trade type"
 			);
 

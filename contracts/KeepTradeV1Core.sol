@@ -56,7 +56,7 @@ contract KeepTradeV1Core is Ownable, ReentrancyGuard{
 		uint256 rate
 		);
 
-	event fulfillTrade(
+	event fillTrade(
 		uint256 indexed tradeIndex,
 		address indexed keeperAddress,
 		uint256 amount
@@ -158,7 +158,7 @@ contract KeepTradeV1Core is Ownable, ReentrancyGuard{
 	}
 
 	// Return the amount keeper got
-	function fulfillTradeTokensForTokens(uint256 tradeId, uint256 amount) external nonReentrant returns (uint256) {
+	function fillTradeTokensForTokens(uint256 tradeId, uint256 amount) external nonReentrant returns (uint256) {
 		require(amount > 0, "Invalid input token amount");
 
 		Trade memory trade = trades[tradeId];
@@ -185,7 +185,7 @@ contract KeepTradeV1Core is Ownable, ReentrancyGuard{
 		uint256 amountToKeeper = (afterBalance - beforeBalance) * (10**18) / _rate;
 
 		// Modify trade data
-		trade.currentFromAmount = _fulfillTrade(tradeId, trade.currentFromAmount, amountToKeeper);
+		trade.currentFromAmount = _fillTrade(tradeId, trade.currentFromAmount, amountToKeeper);
 
 		// Send token to keeper
 		TransferHelper.safeTransfer(trade.fromToken, msg.sender, amountToKeeper);
@@ -199,7 +199,7 @@ contract KeepTradeV1Core is Ownable, ReentrancyGuard{
 	}
 
 	// Return the amount keeper got
-	function fulfillTradeETHForTokens(uint256 tradeId, uint256 amount) external nonReentrant returns (uint256) {
+	function fillTradeETHForTokens(uint256 tradeId, uint256 amount) external nonReentrant returns (uint256) {
 		require(amount > 0, "Invalid input token amount");
 
 		Trade memory trade = trades[tradeId];
@@ -217,7 +217,7 @@ contract KeepTradeV1Core is Ownable, ReentrancyGuard{
 		uint256 amountETH = (afterBalance - beforeBalance) * (10**18) / _rate;
 
 		// Modify trade data
-		trade.currentFromAmount = _fulfillTrade(tradeId, trade.currentFromAmount, amountETH);
+		trade.currentFromAmount = _fillTrade(tradeId, trade.currentFromAmount, amountETH);
 
 		// Calculate fees
 		uint256 amountAfterFees = _calTradeFee(msg.sender, _fromAddress, amountETH);
@@ -240,7 +240,7 @@ contract KeepTradeV1Core is Ownable, ReentrancyGuard{
 	}
 
 	// Return the amount keeper got
-	function fulfillTradeTokensForETH(uint256 tradeId) external payable nonReentrant returns (uint256) {
+	function fillTradeTokensForETH(uint256 tradeId) external payable nonReentrant returns (uint256) {
 		Trade memory trade = trades[tradeId];
 		require(trade.currentFromAmount > 0, "Invalid trade ID");
 		require(trade.tradeType == TradeType.TokenToEth, "Invalid trade type");
@@ -262,7 +262,7 @@ contract KeepTradeV1Core is Ownable, ReentrancyGuard{
 		uint256 amountToKeeper = amountAfterFees * (10**18) / _rate;
 
 		// Modify trade data
-		trade.currentFromAmount = _fulfillTrade(tradeId, trade.currentFromAmount, amountToKeeper);
+		trade.currentFromAmount = _fillTrade(tradeId, trade.currentFromAmount, amountToKeeper);
 
 		// Send token to keeper
 		TransferHelper.safeTransfer(trade.fromToken, msg.sender, amountToKeeper);
@@ -386,11 +386,11 @@ contract KeepTradeV1Core is Ownable, ReentrancyGuard{
 		return tradeIndex-1;
 	}
 
-	function _fulfillTrade(uint256 tradeId, uint256 currentAmount, uint256 fulfillAmount) private returns (uint256 newCurrentAmount) {
-		require(currentAmount >= fulfillAmount, "Invalid trade amount");
-		newCurrentAmount = currentAmount - fulfillAmount;
+	function _fillTrade(uint256 tradeId, uint256 currentAmount, uint256 fillAmount) private returns (uint256 newCurrentAmount) {
+		require(currentAmount >= fillAmount, "Invalid trade amount");
+		newCurrentAmount = currentAmount - fillAmount;
 		trades[tradeId].currentFromAmount = newCurrentAmount;
-		emit fulfillTrade(tradeId, msg.sender ,fulfillAmount);
+		emit fillTrade(tradeId, msg.sender ,fillAmount);
 	}
 
 	function _finishTrade(uint256 tradeId, Trade memory trade) private {
